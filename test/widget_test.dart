@@ -1,15 +1,65 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:study/main.dart';
 
 void main() {
-  testWidgets('shows the StudyMatch discovery screen', (
+  testWidgets('shows the study profile discovery screen', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const StudySwipeApp());
     await tester.pumpAndSettle();
 
     expect(find.text('StudyMatch'), findsOneWidget);
-    expect(find.text('Flutter do zero'), findsOneWidget);
+    expect(find.text('Luiza'), findsOneWidget);
+    expect(find.text('Engenharia Física'), findsOneWidget);
+  });
+
+  testWidgets('creates a match, blocks unsafe text and reports a profile', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const StudySwipeApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.favorite_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('É um match!'), findsOneWidget);
+
+    await tester.tap(find.text('Ir para o chat'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Você é idiota');
+    await tester.pump();
+    expect(
+      find.text('Mensagem bloqueada: remova a palavra inadequada para enviar.'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byIcon(Icons.send_rounded),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(find.byType(TextField), 'Topa estudar esta semana?');
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pump();
+    expect(find.text('Luiza está digitando...'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.textContaining('Termodinâmica'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Denunciar usuário'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Usuário denunciado. Nossa equipe avaliará a conta nas próximas 24h.',
+      ),
+      findsOneWidget,
+    );
   });
 }

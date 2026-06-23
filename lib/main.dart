@@ -64,9 +64,32 @@ class _StudySwipeAppState extends State<StudySwipeApp> {
               ),
               settings: settings,
             );
-          case '/favorites':
+          case '/matches':
             return MaterialPageRoute(
-              builder: (_) => FavoritesScreen(store: store),
+              builder: (_) => MatchesScreen(store: store),
+              settings: settings,
+            );
+          case '/match':
+            return MaterialPageRoute(
+              builder: (_) => MatchScreen(
+                store: store,
+                profile: settings.arguments! as StudyProfile,
+              ),
+              settings: settings,
+            );
+          case '/chat':
+            return MaterialPageRoute(
+              builder: (_) => ChatScreen(
+                store: store,
+                profile: settings.arguments! as StudyProfile,
+              ),
+              settings: settings,
+            );
+          case '/report':
+            return MaterialPageRoute(
+              builder: (_) => ReportResultScreen(
+                profile: settings.arguments! as StudyProfile,
+              ),
               settings: settings,
             );
           case '/profile':
@@ -95,28 +118,80 @@ class StudyTopic {
     required this.level,
     required this.description,
   });
+}
 
-  Map<String, String> toJson() => {
-    'id': id,
-    'title': title,
-    'category': category,
-    'level': level,
-    'description': description,
-  };
+class StudyProfile {
+  final String id;
+  final String name;
+  final String course;
+  final String bio;
+  final List<String> interests;
+  final IconData icon;
+  final Color color;
 
-  factory StudyTopic.fromJson(Map<String, dynamic> json) => StudyTopic(
-    id: json['id'] as String,
-    title: json['title'] as String,
-    category: json['category'] as String,
-    level: json['level'] as String,
-    description: json['description'] as String,
-  );
+  const StudyProfile({
+    required this.id,
+    required this.name,
+    required this.course,
+    required this.bio,
+    required this.interests,
+    required this.icon,
+    required this.color,
+  });
+}
+
+class ChatMessage {
+  final String text;
+  final bool isMine;
+
+  const ChatMessage({required this.text, required this.isMine});
 }
 
 class StudyStore {
   List<StudyTopic> topics = List.of(_initialTopics);
-  Set<String> favoriteIds = {};
-  int currentIndex = 0;
+  final Set<String> myInterests = {'Física', 'Doramas', 'Flutter'};
+  final Set<String> matchedProfileIds = {};
+  final Set<String> seenProfileIds = {};
+  final Set<String> reportedProfileIds = {};
+
+  static const profiles = [
+    StudyProfile(
+      id: 'luiza',
+      name: 'Luiza',
+      course: 'Engenharia Física',
+      bio: 'Entre uma lista de exercícios e outra, sempre cabe um dorama.',
+      interests: ['Física', 'Doramas', 'Literatura'],
+      icon: Icons.auto_awesome,
+      color: Color(0xFF7E57C2),
+    ),
+    StudyProfile(
+      id: 'pedro',
+      name: 'Pedro',
+      course: 'Análise e Desenvolvimento de Sistemas',
+      bio: 'Aprendendo Flutter e colecionando bons projetos de portfólio.',
+      interests: ['Flutter', 'Café', 'Jogos'],
+      icon: Icons.code_rounded,
+      color: Color(0xFF00897B),
+    ),
+    StudyProfile(
+      id: 'nina',
+      name: 'Nina',
+      course: 'Biomedicina',
+      bio: 'Estudo com música baixa, marca-texto e muita curiosidade.',
+      interests: ['Biologia', 'Química', 'Animes'],
+      icon: Icons.biotech_outlined,
+      color: Color(0xFFEF6C00),
+    ),
+    StudyProfile(
+      id: 'rafa',
+      name: 'Rafa',
+      course: 'Administração',
+      bio: 'Gosto de aprender na prática e trocar mapas mentais.',
+      interests: ['Matemática', 'Música', 'Corrida'],
+      icon: Icons.account_tree_outlined,
+      color: Color(0xFF3949AB),
+    ),
+  ];
 
   static const _initialTopics = [
     StudyTopic(
@@ -143,21 +218,51 @@ class StudyStore {
   ];
 
   Future<void> load() async {
-    currentIndex = 0;
+    // Os perfis de demonstração são locais para facilitar a apresentação.
   }
 
-  StudyTopic? get currentTopic =>
-      topics.isEmpty ? null : topics[currentIndex % topics.length];
-
-  List<StudyTopic> get favorites =>
-      topics.where((topic) => favoriteIds.contains(topic.id)).toList();
-
-  void nextTopic() {
-    if (topics.isNotEmpty) currentIndex = (currentIndex + 1) % topics.length;
+  StudyProfile? get currentProfile {
+    for (final profile in profiles) {
+      if (!seenProfileIds.contains(profile.id) &&
+          !reportedProfileIds.contains(profile.id)) {
+        return profile;
+      }
+    }
+    return null;
   }
 
-  void toggleFavorite(StudyTopic topic) {
-    if (!favoriteIds.add(topic.id)) favoriteIds.remove(topic.id);
+  List<StudyProfile> get matches => profiles
+      .where(
+        (profile) =>
+            matchedProfileIds.contains(profile.id) &&
+            !reportedProfileIds.contains(profile.id),
+      )
+      .toList();
+
+  List<String> sharedInterests(StudyProfile profile) {
+    return profile.interests
+        .where((interest) => myInterests.contains(interest))
+        .toList();
+  }
+
+  bool likeProfile(StudyProfile profile) {
+    seenProfileIds.add(profile.id);
+    final hasMatch = sharedInterests(profile).isNotEmpty;
+    if (hasMatch) matchedProfileIds.add(profile.id);
+    return hasMatch;
+  }
+
+  void passProfile(StudyProfile profile) {
+    seenProfileIds.add(profile.id);
+  }
+
+  void resetProfiles() {
+    seenProfileIds.clear();
+  }
+
+  void reportProfile(StudyProfile profile) {
+    reportedProfileIds.add(profile.id);
+    matchedProfileIds.remove(profile.id);
   }
 
   void addTopic({
@@ -184,8 +289,6 @@ class StudyStore {
 
   void deleteTopic(StudyTopic topic) {
     topics.removeWhere((item) => item.id == topic.id);
-    favoriteIds.remove(topic.id);
-    if (topics.isEmpty) currentIndex = 0;
   }
 }
 
@@ -201,25 +304,38 @@ class DiscoverScreen extends StatefulWidget {
 class _DiscoverScreenState extends State<DiscoverScreen> {
   double dragX = 0;
 
-  void _moveNext({bool favorite = false}) {
-    final topic = widget.store.currentTopic;
-    if (topic != null &&
-        favorite &&
-        !widget.store.favoriteIds.contains(topic.id)) {
-      widget.store.toggleFavorite(topic);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${topic.title} salvo nos favoritos!')),
-      );
-    }
+  void _passCurrent() {
+    final profile = widget.store.currentProfile;
+    if (profile == null) return;
     setState(() {
-      widget.store.nextTopic();
+      widget.store.passProfile(profile);
       dragX = 0;
     });
   }
 
+  void _likeCurrent() {
+    final profile = widget.store.currentProfile;
+    if (profile == null) return;
+    final didMatch = widget.store.likeProfile(profile);
+    setState(() => dragX = 0);
+
+    if (didMatch) {
+      Navigator.pushNamed(context, '/match', arguments: profile).then((_) {
+        if (mounted) setState(() {});
+      });
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ainda não foi match. Continue conhecendo pessoas!'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final topic = widget.store.currentTopic;
+    final profile = widget.store.currentProfile;
     return Scaffold(
       appBar: AppBar(
         title: const Text('StudyMatch'),
@@ -240,34 +356,38 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         child: Column(
           children: [
             const Text(
-              'Encontre algo novo para estudar',
+              'Encontre sua dupla de estudos',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: topic == null
-                  ? _EmptyTopics(
-                      onAdd: () => Navigator.pushNamed(context, '/topic/new'),
+              child: profile == null
+                  ? _EmptyProfiles(
+                      onReset: () => setState(widget.store.resetProfiles),
                     )
                   : GestureDetector(
                       onPanUpdate: (details) =>
                           setState(() => dragX += details.delta.dx),
                       onPanEnd: (_) {
-                        if (dragX > 100) _moveNext(favorite: true);
-                        if (dragX < -100) _moveNext();
-                        if (dragX.abs() <= 100) setState(() => dragX = 0);
+                        if (dragX > 100) {
+                          _likeCurrent();
+                        } else if (dragX < -100) {
+                          _passCurrent();
+                        } else {
+                          setState(() => dragX = 0);
+                        }
                       },
                       child: Transform.translate(
                         offset: Offset(dragX, 0),
                         child: Transform.rotate(
                           angle: dragX / 1200,
-                          child: TopicCard(topic: topic, dragX: dragX),
+                          child: ProfileCard(profile: profile, dragX: dragX),
                         ),
                       ),
                     ),
             ),
             const SizedBox(height: 20),
-            if (topic != null)
+            if (profile != null)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -275,14 +395,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     icon: Icons.close_rounded,
                     color: Colors.red,
                     label: 'Passar',
-                    onTap: _moveNext,
+                    onTap: _passCurrent,
                   ),
                   const SizedBox(width: 24),
                   RoundAction(
                     icon: Icons.favorite_rounded,
                     color: Colors.green,
-                    label: 'Quero estudar',
-                    onTap: () => _moveNext(favorite: true),
+                    label: 'Curtir',
+                    onTap: _likeCurrent,
                   ),
                 ],
               ),
@@ -544,47 +664,390 @@ class _TopicFormScreenState extends State<TopicFormScreen> {
   }
 }
 
-class FavoritesScreen extends StatefulWidget {
+class MatchesScreen extends StatefulWidget {
   final StudyStore store;
 
-  const FavoritesScreen({super.key, required this.store});
+  const MatchesScreen({super.key, required this.store});
 
   @override
-  State<FavoritesScreen> createState() => _FavoritesScreenState();
+  State<MatchesScreen> createState() => _MatchesScreenState();
 }
 
-class _FavoritesScreenState extends State<FavoritesScreen> {
+class _MatchesScreenState extends State<MatchesScreen> {
   @override
   Widget build(BuildContext context) {
-    final favorites = widget.store.favorites;
+    final matches = widget.store.matches;
     return Scaffold(
-      appBar: AppBar(title: const Text('Quero estudar')),
-      body: favorites.isEmpty
-          ? const Center(child: Text('Ainda não há assuntos salvos.'))
+      appBar: AppBar(title: const Text('Seus matches')),
+      body: matches.isEmpty
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text(
+                  'Curta perfis com interesses em comum para criar um match.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: favorites.length,
+              itemCount: matches.length,
               itemBuilder: (context, index) {
-                final topic = favorites[index];
+                final profile = matches[index];
                 return Card(
                   child: ListTile(
-                    leading: Icon(
-                      topicIcon(topic.category),
-                      color: topicColor(topic.category),
+                    leading: CircleAvatar(
+                      backgroundColor: profile.color.withValues(alpha: .15),
+                      foregroundColor: profile.color,
+                      child: Icon(profile.icon),
                     ),
-                    title: Text(topic.title),
-                    subtitle: Text(topic.description),
+                    title: Text(profile.name),
+                    subtitle: Text(
+                      'Em comum: ${widget.store.sharedInterests(profile).join(', ')}',
+                    ),
                     trailing: IconButton(
-                      tooltip: 'Remover favorito',
-                      onPressed: () =>
-                          setState(() => widget.store.toggleFavorite(topic)),
-                      icon: const Icon(Icons.favorite, color: Colors.red),
+                      tooltip: 'Abrir chat',
+                      onPressed: () async {
+                        await Navigator.pushNamed(
+                          context,
+                          '/chat',
+                          arguments: profile,
+                        );
+                        if (mounted) setState(() {});
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline),
                     ),
                   ),
                 );
               },
             ),
       bottomNavigationBar: const AppNavigation(currentIndex: 1),
+    );
+  }
+}
+
+class MatchScreen extends StatelessWidget {
+  final StudyStore store;
+  final StudyProfile profile;
+
+  const MatchScreen({super.key, required this.store, required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final shared = store.sharedInterests(profile);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.favorite_rounded,
+                  color: Colors.pink,
+                  size: 76,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'É um match!',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Você e ${profile.name} podem trocar ideias e estudar juntos.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircleAvatar(
+                      radius: 34,
+                      child: Icon(Icons.person, size: 38),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Icon(Icons.favorite, color: Colors.pink, size: 30),
+                    ),
+                    CircleAvatar(
+                      radius: 34,
+                      backgroundColor: profile.color.withValues(alpha: .15),
+                      foregroundColor: profile.color,
+                      child: Icon(profile.icon, size: 38),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                const Text('Interesses em comum'),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: shared
+                      .map((interest) => Chip(label: Text(interest)))
+                      .toList(),
+                ),
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pushReplacementNamed(
+                    context,
+                    '/chat',
+                    arguments: profile,
+                  ),
+                  icon: const Icon(Icons.chat_bubble_rounded),
+                  label: const Text('Ir para o chat'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Continuar vendo perfis'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ChatScreen extends StatefulWidget {
+  final StudyStore store;
+  final StudyProfile profile;
+
+  const ChatScreen({super.key, required this.store, required this.profile});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  static final _blockedWords = RegExp(
+    r'\b(idiota|burro|ot[aá]rio|palavr[aã]o)\b',
+    caseSensitive: false,
+  );
+
+  final _controller = TextEditingController();
+  late final List<ChatMessage> _messages;
+  var _isTyping = false;
+  var _containsBlockedWord = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final shared = widget.store.sharedInterests(widget.profile).join(' e ');
+    _messages = [
+      ChatMessage(
+        text:
+            'Oi! Que bom encontrar alguém que também curte $shared. Como você está estudando esses assuntos?',
+        isMine: false,
+      ),
+    ];
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _canSend =>
+      _controller.text.trim().isNotEmpty && !_containsBlockedWord;
+
+  void _onMessageChanged(String value) {
+    setState(() => _containsBlockedWord = _blockedWords.hasMatch(value));
+  }
+
+  void _sendMessage() {
+    if (!_canSend) return;
+    final message = _controller.text.trim();
+    setState(() {
+      _messages.add(ChatMessage(text: message, isMine: true));
+      _controller.clear();
+      _isTyping = true;
+    });
+
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() {
+        _isTyping = false;
+        _messages.add(ChatMessage(text: _automaticReply(), isMine: false));
+      });
+    });
+  }
+
+  String _automaticReply() {
+    switch (widget.profile.id) {
+      case 'luiza':
+        return 'Eu também! Termodinâmica está rendendo uma batalha hoje, mas o episódio novo do dorama salvou a noite 😄. Que tal fazer uma revisão de 40 minutos esta semana?';
+      case 'pedro':
+        return 'Boa! Estou montando um projetinho em Flutter para praticar. Se quiser, a gente pode comparar as telas e trocar dicas depois da aula.';
+      default:
+        return 'Gostei da ideia! Podemos combinar um horário curto e deixar os estudos mais leves.';
+    }
+  }
+
+  void _reportProfile() {
+    widget.store.reportProfile(widget.profile);
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/report',
+      (route) => false,
+      arguments: widget.profile,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: widget.profile.color.withValues(alpha: .15),
+              foregroundColor: widget.profile.color,
+              child: Icon(widget.profile.icon, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Text(widget.profile.name),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Denunciar usuário',
+            onPressed: _reportProfile,
+            icon: const Icon(Icons.flag_outlined),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.shield_outlined, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Conversa segura: mensagens ofensivas são bloqueadas.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _messages.length + (_isTyping ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (_isTyping && index == _messages.length) {
+                    return _TypingIndicator(name: widget.profile.name);
+                  }
+                  return _ChatBubble(message: _messages[index]);
+                },
+              ),
+            ),
+            if (_containsBlockedWord)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Mensagem bloqueada: remova a palavra inadequada para enviar.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      onChanged: _onMessageChanged,
+                      minLines: 1,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Escreva uma mensagem...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    tooltip: 'Enviar mensagem',
+                    onPressed: _canSend ? _sendMessage : null,
+                    icon: const Icon(Icons.send_rounded),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ReportResultScreen extends StatelessWidget {
+  final StudyProfile profile;
+
+  const ReportResultScreen({super.key, required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.shield_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 74,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Denúncia enviada',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Usuário denunciado. Nossa equipe avaliará a conta nas próximas 24h.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 28),
+                FilledButton(
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+                  child: const Text('Voltar aos perfis'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -615,7 +1078,7 @@ class ProfileScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _Stat(value: '${store.topics.length}', label: 'Assuntos'),
-                    _Stat(value: '${store.favorites.length}', label: 'Salvos'),
+                    _Stat(value: '${store.matches.length}', label: 'Matches'),
                   ],
                 ),
               ),
@@ -634,30 +1097,29 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class TopicCard extends StatelessWidget {
-  final StudyTopic topic;
+class ProfileCard extends StatelessWidget {
+  final StudyProfile profile;
   final double dragX;
 
-  const TopicCard({super.key, required this.topic, required this.dragX});
+  const ProfileCard({super.key, required this.profile, required this.dragX});
 
   @override
   Widget build(BuildContext context) {
-    final likedOpacity = (dragX / 120).clamp(0.0, 1.0).toDouble();
-    final skippedOpacity = (-dragX / 120).clamp(0.0, 1.0).toDouble();
-    final color = topicColor(topic.category);
+    final likeOpacity = (dragX / 120).clamp(0.0, 1.0).toDouble();
+    final passOpacity = (-dragX / 120).clamp(0.0, 1.0).toDouble();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color, color.withValues(alpha: .68)],
+          colors: [profile.color, profile.color.withValues(alpha: .68)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: .28),
+            color: profile.color.withValues(alpha: .28),
             blurRadius: 20,
             offset: const Offset(0, 12),
           ),
@@ -668,20 +1130,20 @@ class TopicCard extends StatelessWidget {
           Align(
             alignment: Alignment.topCenter,
             child: Icon(
-              topicIcon(topic.category),
-              size: 120,
+              profile.icon,
+              size: 128,
               color: Colors.white.withValues(alpha: .9),
             ),
           ),
           Opacity(
-            opacity: likedOpacity,
+            opacity: likeOpacity,
             child: const Align(
               alignment: Alignment.topLeft,
-              child: SwipeBadge(text: 'QUERO', color: Colors.greenAccent),
+              child: SwipeBadge(text: 'CURTIR', color: Colors.greenAccent),
             ),
           ),
           Opacity(
-            opacity: skippedOpacity,
+            opacity: passOpacity,
             child: const Align(
               alignment: Alignment.topRight,
               child: SwipeBadge(text: 'PASSAR', color: Colors.redAccent),
@@ -693,22 +1155,25 @@ class TopicCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Chip(
-                  label: Text(topic.category),
-                  backgroundColor: Colors.white.withValues(alpha: .85),
-                ),
-                const SizedBox(height: 12),
                 Text(
-                  topic.title,
+                  profile.name,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 32,
+                    fontSize: 34,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
-                  topic.description,
+                  profile.course,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  profile.bio,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -716,17 +1181,106 @@ class TopicCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Text(
-                  'Nível: ${topic.level}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: profile.interests
+                      .map(
+                        (interest) => Chip(
+                          label: Text(interest),
+                          backgroundColor: Colors.white.withValues(alpha: .85),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ChatBubble extends StatelessWidget {
+  final ChatMessage message;
+
+  const _ChatBubble({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: message.isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * .78,
+        ),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: message.isMine
+                ? colorScheme.primaryContainer
+                : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(message.text),
+        ),
+      ),
+    );
+  }
+}
+
+class _TypingIndicator extends StatelessWidget {
+  final String name;
+
+  const _TypingIndicator({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text('$name está digitando...'),
+      ),
+    );
+  }
+}
+
+class _EmptyProfiles extends StatelessWidget {
+  final VoidCallback onReset;
+
+  const _EmptyProfiles({required this.onReset});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.people_outline, size: 72),
+            const SizedBox(height: 16),
+            const Text(
+              'Você viu todos os perfis.',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: onReset,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Ver perfis novamente'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -742,7 +1296,7 @@ class AppNavigation extends StatelessWidget {
     return NavigationBar(
       selectedIndex: currentIndex,
       onDestinationSelected: (index) {
-        const routes = ['/', '/favorites', '/profile'];
+        const routes = ['/', '/matches', '/profile'];
         if (index != currentIndex) {
           Navigator.pushReplacementNamed(context, routes[index]);
         }
@@ -751,12 +1305,12 @@ class AppNavigation extends StatelessWidget {
         NavigationDestination(
           icon: Icon(Icons.style_outlined),
           selectedIcon: Icon(Icons.style),
-          label: 'Descobrir',
+          label: 'Perfis',
         ),
         NavigationDestination(
           icon: Icon(Icons.favorite_outline),
           selectedIcon: Icon(Icons.favorite),
-          label: 'Salvos',
+          label: 'Matches',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),
