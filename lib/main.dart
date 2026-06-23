@@ -147,6 +147,35 @@ class ChatMessage {
   const ChatMessage({required this.text, required this.isMine});
 }
 
+class ChatSafetyFilter {
+  static final _blockedContent = RegExp(
+    r'\b(?:idiota(?:s)?|burr(?:o|a|os|as)|otari(?:o|a|os|as)|babaca(?:s)?|imbecil(?:es)?|trouxa(?:s)?|nojent(?:o|a|os|as)|ridicul(?:o|a|os|as)|inutil|inuteis|desgracad(?:o|a|os|as)|lixo(?:s)?|merda(?:s)?|porra(?:s)?|caralho(?:s)?|cala\s+(?:a\s+)?boca|vai\s+se\s+ferrar|vai\s+tomar\s+no\s+cu|filh[oa]\s+da\s+puta|foda[\s-]?se|fdp|vsf)\b',
+    caseSensitive: false,
+  );
+
+  static final _blockedCompactContent = RegExp(
+    r'(?:idiotas?|burros?|burras?|otarios?|otarias?|babacas?|imbecis?|trouxas?|nojentos?|nojentas?|ridiculos?|ridiculas?|inutil|inuteis|desgracados?|desgracadas?|lixos?|merdas?|porras?|caralhos?|calaboca|vaiseferrar|vaitomarnocu|filhodaputa|filhadaputa|fodase|fdp|vsf)',
+  );
+
+  static bool containsBlockedContent(String content) {
+    final normalized = _normalize(content);
+    final compact = normalized.replaceAll(RegExp(r'[^a-z]'), '');
+    return _blockedContent.hasMatch(normalized) ||
+        _blockedCompactContent.hasMatch(compact);
+  }
+
+  static String _normalize(String content) {
+    return content
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàâãä]'), 'a')
+        .replaceAll(RegExp(r'[éèêë]'), 'e')
+        .replaceAll(RegExp(r'[íìîï]'), 'i')
+        .replaceAll(RegExp(r'[óòôõö]'), 'o')
+        .replaceAll(RegExp(r'[úùûü]'), 'u')
+        .replaceAll('ç', 'c');
+  }
+}
+
 class StudyStore {
   List<StudyTopic> topics = List.of(_initialTopics);
   final Set<String> myInterests = {'Física', 'Doramas', 'Flutter'};
@@ -826,11 +855,6 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  static final _blockedWords = RegExp(
-    r'\b(idiota|burro|ot[aá]rio|palavr[aã]o)\b',
-    caseSensitive: false,
-  );
-
   final _controller = TextEditingController();
   late final List<ChatMessage> _messages;
   var _isTyping = false;
@@ -859,7 +883,10 @@ class _ChatScreenState extends State<ChatScreen> {
       _controller.text.trim().isNotEmpty && !_containsBlockedWord;
 
   void _onMessageChanged(String value) {
-    setState(() => _containsBlockedWord = _blockedWords.hasMatch(value));
+    setState(
+      () =>
+          _containsBlockedWord = ChatSafetyFilter.containsBlockedContent(value),
+    );
   }
 
   void _sendMessage() {

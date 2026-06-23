@@ -4,6 +4,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:study/main.dart';
 
 void main() {
+  group('ChatSafetyFilter', () {
+    test('blocks offensive words, phrases and simple disguises', () {
+      for (final message in [
+        'Você é um idiota',
+        'QUE OTÁRIO!',
+        'Isso é uma merda',
+        'Cala a boca',
+        'Vai se ferrar',
+        'i.d.i.o.t.a',
+        'b-u-r-r-o',
+        'foda-se',
+      ]) {
+        expect(ChatSafetyFilter.containsBlockedContent(message), isTrue);
+      }
+    });
+
+    test('allows a respectful study message', () {
+      expect(
+        ChatSafetyFilter.containsBlockedContent(
+          'Você quer revisar Física comigo amanhã?',
+        ),
+        isFalse,
+      );
+    });
+  });
+
   testWidgets('shows the study profile discovery screen', (
     WidgetTester tester,
   ) async {

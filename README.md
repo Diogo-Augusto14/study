@@ -19,7 +19,7 @@ Tornar a escolha de um novo assunto de estudo mais simples e visual, além de pe
 - Match automático quando existem interesses em comum
 - Tela de match com acesso ao chat
 - Chat bot simulado: indicador de digitação e resposta automática após 2 segundos
-- Filtro de segurança que bloqueia mensagens com palavras inadequadas
+- Filtro de segurança que bloqueia ofensas, palavrões, agressões em frases e variações com maiúsculas, acentos, pontos ou hífens
 - Denúncia que encerra a conversa e informa o prazo de avaliação
 - Lista de matches para retomar uma conversa
 - Perfil com indicadores simples
