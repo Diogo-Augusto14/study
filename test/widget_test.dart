@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:study/main.dart';
+import 'package:meu_primeiro_app/main.dart';
+
+Future<void> openHomeAfterSplash(WidgetTester tester) async {
+  await tester.pumpWidget(const StudySwipeApp());
+  await tester.pump(const Duration(seconds: 3));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group('ChatSafetyFilter', () {
@@ -30,11 +36,21 @@ void main() {
     });
   });
 
-  testWidgets('shows the study profile discovery screen', (
+  testWidgets('shows the splash screen before opening the app', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const StudySwipeApp());
-    await tester.pumpAndSettle();
+    await tester.pump();
+
+    expect(find.text('Bem-vindo ao'), findsOneWidget);
+    expect(find.text('StudyMatch'), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
+  });
+
+  testWidgets('shows the study profile discovery screen', (
+    WidgetTester tester,
+  ) async {
+    await openHomeAfterSplash(tester);
 
     expect(find.text('StudyMatch'), findsOneWidget);
     expect(find.text('Luiza'), findsOneWidget);
@@ -44,8 +60,7 @@ void main() {
   testWidgets('creates a match, blocks unsafe text and reports a profile', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const StudySwipeApp());
-    await tester.pumpAndSettle();
+    await openHomeAfterSplash(tester);
 
     await tester.tap(find.byIcon(Icons.favorite_rounded));
     await tester.pumpAndSettle();

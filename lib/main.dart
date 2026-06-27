@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const StudySwipeApp());
@@ -36,14 +39,20 @@ class _StudySwipeAppState extends State<StudySwipeApp> {
         scaffoldBackgroundColor: const Color(0xFFFAF8FF),
         useMaterial3: true,
       ),
-      home: isLoading
-          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          : DiscoverScreen(store: store),
+      initialRoute: '/splash',
       onGenerateRoute: (settings) {
         switch (settings.name) {
-          case '/':
+          case '/splash':
             return MaterialPageRoute(
-              builder: (_) => DiscoverScreen(store: store),
+              builder: (_) => const SplashScreen(),
+              settings: settings,
+            );
+          case '/':
+          case '/home':
+            return MaterialPageRoute(
+              builder: (_) => isLoading
+                  ? const _LoadingScreen()
+                  : DiscoverScreen(store: store),
               settings: settings,
             );
           case '/topics':
@@ -101,6 +110,168 @@ class _StudySwipeAppState extends State<StudySwipeApp> {
         return null;
       },
     );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  static const Color brandPurple = Color(0xFF6366F1);
+
+  late final AnimationController _controller;
+  late final Animation<double> _logoFade;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _textFade;
+  Timer? _navigationTimer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+    );
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+
+    _logoFade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    );
+    _logoScale = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _textFade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
+    );
+
+    _controller.forward();
+    _scheduleNavigation();
+  }
+
+  void _scheduleNavigation() {
+    _navigationTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/home');
+    });
+  }
+
+  @override
+  void dispose() {
+    _navigationTimer?.cancel();
+    _controller.dispose();
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+    );
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: brandPurple,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            FadeTransition(
+              opacity: _logoFade,
+              child: ScaleTransition(scale: _logoScale, child: _buildLogo()),
+            ),
+            const SizedBox(height: 8),
+            FadeTransition(opacity: _textFade, child: _buildWelcomeText()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _textWidth(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return painter.size.width;
+  }
+
+  Widget _buildWelcomeText() {
+    const baseStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 40,
+      fontWeight: FontWeight.w800,
+    );
+
+    const firstLine = 'Bem-vindo ao';
+    const secondLine = 'StudyMatch';
+
+    final firstLineStyle = baseStyle.copyWith(letterSpacing: 0.2);
+    final firstLineWidth = _textWidth(firstLine, firstLineStyle);
+    final secondLineBaseWidth = _textWidth(
+      secondLine,
+      baseStyle.copyWith(letterSpacing: 0),
+    );
+
+    final gaps = secondLine.length - 1;
+    final extraSpacing = gaps > 0
+        ? (firstLineWidth - secondLineBaseWidth) / gaps
+        : 0.0;
+
+    final secondLineStyle = baseStyle.copyWith(letterSpacing: extraSpacing);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(firstLine, style: firstLineStyle),
+        Transform.translate(
+          offset: const Offset(0, -8),
+          child: Text(secondLine, style: secondLineStyle),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLogo() {
+    return Image.asset(
+      'assets/images/logo_white.png',
+      width: 250,
+      height: 250,
+      errorBuilder: (context, error, stackTrace) {
+        return const Icon(
+          Icons.local_fire_department,
+          size: 180,
+          color: Colors.white,
+        );
+      },
+    );
+  }
+}
+
+class _LoadingScreen extends StatelessWidget {
+  const _LoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
 
