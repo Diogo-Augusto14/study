@@ -7,6 +7,13 @@ Future<void> openHomeAfterSplash(WidgetTester tester) async {
   await tester.pumpWidget(const StudySwipeApp());
   await tester.pump(const Duration(seconds: 3));
   await tester.pumpAndSettle();
+  // Pula o onboarding e faz o login de demonstração (admin / 123).
+  await tester.tap(find.text('Pular'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextField).first, 'admin');
+  await tester.enterText(find.byType(TextField).at(1), '123');
+  await tester.tap(find.widgetWithText(FilledButton, 'Entrar'));
+  await tester.pumpAndSettle();
 }
 
 void main() {
