@@ -33,6 +33,11 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Local Codex/Flutter sandbox state.
+.codex-appdata/
+.codex-localappdata/
+.codex-gitconfig
+
 # Symbolication related
 app.*.symbols
 
