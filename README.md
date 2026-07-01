@@ -6,15 +6,32 @@ Você não precisa conhecer Flutter ou Android Studio para seguir este guia. Fa�
 
 ## O que o aplicativo demonstra
 
+- **Splash screen animada** com gradiente roxo, logo e a mensagem "Bem-vindo ao StudyMatch".
+- **Onboarding** em blocos deslizáveis com as regras de segurança do app.
+- **Login** com usuário fixo (`admin` / `123`) e botões simulados de Google e Apple.
+- **Tema claro/escuro** com um botão único no topo que muda o app inteiro.
 - Perfis de estudo de demonstração com interesses diferentes.
-- Swipe para passar ou curtir um perfil.
+- Swipe para passar ou curtir um perfil, com cards estilo Tinder (tags em #hashtag, animação ao trocar de perfil).
 - Match automático quando existem interesses em comum.
-- Tela de match com acesso ao chat.
-- Chat bot simulado com indicador de digitação e resposta automática após 2 segundos.
+- Tela **"É um match!"** comemorativa (animação de entrada) com acesso ao chat.
+- Chat bot simulado com indicador de digitação animado, avatar, horário das mensagens e conversa roteirizada por perfil.
 - Filtro de segurança que bloqueia ofensas, palavrões, agressões em frases e variações com maiúsculas, acentos, pontos ou hífens.
 - Denúncia que encerra o chat e informa que a conta será avaliada.
 - Cadastro, consulta, edição e exclusão de assuntos de estudo.
-- Navegação por rotas entre perfis, matches, chat, assuntos e perfil.
+- Navegação por rotas entre splash, onboarding, login, perfis, matches, chat, assuntos e perfil.
+
+## Fluxo de telas
+
+```text
+Splash  →  Onboarding (regras)  →  Login  →  Perfis (swipe)  →  Match  →  Chat
+                                                    ↑                       │
+                                                    └──── Denúncia (24h) ◄──┘
+```
+
+1. **Splash:** tela de abertura animada; após ~3s segue para o onboarding.
+2. **Onboarding/Políticas:** explica respeito, filtro de mensagens, denúncia e proteção de dados; botão **Próximo** (ou **Pular**) leva ao login.
+3. **Login:** entre com `admin` / `123` (ou use os botões Google/Apple simulados) para chegar aos perfis.
+4. **Perfis (Match/Swipe), Match, Chat:** o coração do app, descritos no roteiro abaixo.
 
 ## O que é necessário em outra máquina
 
@@ -195,17 +212,20 @@ Você não precisa fechar e abrir o projeto a cada alteração.
 
 Este é um fluxo curto para provar as principais funcionalidades:
 
-1. Abra a aba **Perfis**.
-2. No primeiro perfil, **Luiza**, toque no coração ou arraste o card para a direita.
-3. Explique que o código compara os interesses do usuário com os interesses do perfil. Luiza possui `Física` e `Doramas` em comum, então a tela **É um match!** aparece.
-4. Toque em **Ir para o chat**.
-5. Envie uma mensagem respeitosa, por exemplo: `Topa revisar Física esta semana?`.
-6. Mostre o indicador **Luiza está digitando...** e aguarde 2 segundos pela resposta do bot simulado.
-7. Digite uma mensagem ofensiva de teste, por exemplo: `Você é um idiota`.
-8. Mostre que o botão de enviar é bloqueado imediatamente e o aviso de segurança aparece.
-9. Toque na bandeira no topo do chat para denunciar o perfil.
-10. Mostre a tela: **"Usuário denunciado. Nossa equipe avaliará a conta nas próximas 24h."**
-11. Volte aos perfis e mostre a tela **Meus assuntos**, onde é possível cadastrar, editar e excluir temas de estudo.
+1. Abra o app e mostre a **splash screen** animada; em seguida ela avança para o **onboarding**.
+2. Passe pelos blocos de **regras de segurança** e toque em **Próximo/Começar** (ou **Pular**) para chegar ao **login**.
+3. No login, entre com usuário `admin` e senha `123` (ou mostre os botões **Google/Apple** simulados). Você pode demonstrar o erro digitando uma senha errada para ver o aviso **"Usuário inválido"**.
+4. Toque no ícone de tema no topo para alternar entre **claro e escuro** e mostrar que vale para todas as telas.
+5. Na aba **Perfis**, no primeiro perfil **Luiza**, toque no coração ou arraste o card para a direita.
+6. Explique que o código compara os interesses do usuário com os interesses do perfil. Luiza possui `Física` e `Doramas` em comum, então a tela **É um match!** aparece.
+7. Toque em **Ir para o chat**.
+8. Envie uma mensagem respeitosa, por exemplo: `Topa revisar Física esta semana?`.
+9. Mostre o indicador **Luiza está digitando...** e aguarde 2 segundos pela resposta do bot simulado (a conversa avança de forma roteirizada a cada mensagem).
+10. Digite uma mensagem ofensiva de teste, por exemplo: `Você é um idiota`.
+11. Mostre que o botão de enviar é bloqueado imediatamente e o aviso de segurança aparece.
+12. Toque na bandeira no topo do chat para denunciar o perfil.
+13. Mostre a tela: **"Usuário denunciado. Nossa equipe avaliará a conta nas próximas 24h."**
+14. Volte aos perfis e mostre a tela **Meus assuntos**, onde é possível cadastrar, editar e excluir temas de estudo.
 
 ## Rodar testes e verificar o código
 
