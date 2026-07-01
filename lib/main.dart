@@ -140,7 +140,7 @@ class _StudySwipeAppState extends State<StudySwipeApp> {
 
 class AppColors {
   static const Color brandPurple = Color(0xFF6366F1);
-  static const Color brandPurpleDeep = Color(0xFF4338CA);
+  static const Color brandPurpleDeep = Color(0xFF6366F1); // Mudei para manter o roxo padrão se preferir
   static const Color matchGreen = Color(0xFF10B981);
   static const Color passRed = Color(0xFFEF4444);
 
@@ -149,6 +149,16 @@ class AppColors {
     colors: [brandPurple, brandPurpleDeep],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
+  );
+
+/// Gradiente específico para a tela de Match (Mais claro em cima e mais escuro embaixo)
+  static const LinearGradient matchGradient = LinearGradient(
+    colors: [
+      Color(0xFFF3E8FF), // Roxo pastel ultra claro (começa aqui em cima)
+      Color(0xFF6366F1), // O roxo principal da marca (termina aqui embaixo)
+    ],
+    begin: Alignment.topCenter,    // MUDOU AQUI: Alinhado no topo (centro)
+    end: Alignment.bottomCenter, // MUDOU AQUI: Alinhado na base (centro)
   );
 }
 
@@ -229,7 +239,7 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(gradient: AppColors.brandGradient),
+        decoration: const BoxDecoration(gradient: AppColors.matchGradient),
         child: SafeArea(
           child: Stack(
             children: [
@@ -535,7 +545,7 @@ class _OnboardingPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(30),
             decoration: BoxDecoration(
-              gradient: AppColors.brandGradient,
+              gradient: AppColors.matchGradient,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -545,7 +555,7 @@ class _OnboardingPage extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, size: 64, color: Colors.white),
+            child: Icon(icon, size: 64, color: Colors.black),
           ),
           const SizedBox(height: 32),
           Text(
@@ -635,7 +645,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
-              gradient: AppColors.brandGradient,
+              gradient: AppColors.matchGradient,
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
             ),
             child: SafeArea(
@@ -853,7 +863,7 @@ class _ChatScript {
 
 class ChatSafetyFilter {
   static final _blockedContent = RegExp(
-    r'\b(?:idiota(?:s)?|burr(?:o|a|os|as)|otari(?:o|a|os|as)|babaca(?:s)?|imbecil(?:es)?|trouxa(?:s)?|nojent(?:o|a|os|as)|ridicul(?:o|a|os|as)|inutil|inuteis|desgracad(?:o|a|os|as)|lixo(?:s)?|merda(?:s)?|porra(?:s)?|caralho(?:s)?|cala\s+(?:a\s+)?boca|vai\s+se\s+ferrar|vai\s+tomar\s+no\s+cu|filh[oa]\s+da\s+puta|foda[\s-]?se|fdp|vsf)\b',
+    r'\b(?:idiota(?:s)?|burr(?:o|a|os|as)|otari(?:o|a|os|as)|babaca(?:s)?|imbecil(?:es)?|trouxa(?:s)?|nojent(?:o|a|os|as)|ridicul(?:o|a|os|as)|inutil|inuteis|desgracad(?:o|a|os|as)|lixo(?:s)?|merda(?:s)?|porra(?:s)?|caralho(?:s)?|cala\s+(?:a\s+)?boca|vai\s+se\s+ferrar|vai\s+tomar\s+no\s+cu|filh[oa]\s+da\s+puta|foda[\s-]?se|fdp|vsf)\b|puta',
     caseSensitive: false,
   );
 
@@ -1436,17 +1446,18 @@ class _MatchesScreenState extends State<MatchesScreen> {
     final matches = widget.store.matches;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Seus matches'),
+        title: Text('Seus matches'),
         actions: [ThemeToggleButton(store: widget.store)],
       ),
       body: matches.isEmpty
-          ? const Center(
+          ?  Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
                 child: Text(
-                  'Curta perfis com interesses em comum para criar um match.',
-                  textAlign: TextAlign.center,
-                ),
+  'Curta perfis com interesses em comum para criar um match.',
+  textAlign: TextAlign.center,
+  
+),
               ),
             )
           : ListView.builder(
@@ -1528,7 +1539,7 @@ class _MatchScreenState extends State<MatchScreen>
     final shared = widget.store.sharedInterests(profile);
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.brandGradient),
+        decoration: const BoxDecoration(gradient: AppColors.matchGradient),
         child: SafeArea(
           child: Center(
             child: Padding(
@@ -1599,9 +1610,13 @@ class _MatchScreenState extends State<MatchScreen>
                           ],
                         ),
                         const SizedBox(height: 28),
-                        const Text(
+                        Text(
                           'Interesses em comum',
-                          style: TextStyle(color: Colors.white70),
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70  // Cor no modo escuro
+                                : Colors.black54, // Cor no modo claro
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Wrap(
@@ -1613,7 +1628,11 @@ class _MatchScreenState extends State<MatchScreen>
                                 (interest) => Chip(
                                   label: Text(
                                     interest,
-                                    style: const TextStyle(color: Colors.white),
+                                    style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70  // Cor no modo escuro
+                                : Colors.black54, // Cor no modo claro
+                          ),
                                   ),
                                   backgroundColor: Colors.white.withValues(
                                     alpha: .18,
